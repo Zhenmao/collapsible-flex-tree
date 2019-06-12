@@ -115,10 +115,7 @@ d3.json("flare.json").then(data => {
 
 	const gLink = g.append("g").attr("fill", "none");
 
-	const gNode = g
-		.append("g")
-		.attr("cursor", "pointer")
-		.attr("pointer-events", "all");
+	const gNode = g.append("g").attr("pointer-events", "all");
 
 	////////////////////////////////////////////////////////////
 	//// Render ////////////////////////////////////////////////
@@ -160,7 +157,8 @@ d3.json("flare.json").then(data => {
 			.on("click", d => {
 				d.children = d.children ? null : d._children;
 				update(d);
-			});
+			})
+			.attr("cursor", d => (d._children ? "pointer" : "default"));
 
 		nodeEnter
 			.append("line")
