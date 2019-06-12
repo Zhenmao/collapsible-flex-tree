@@ -1,0 +1,19 @@
+body {
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 14px;
+}
+
+svg text {
+	font-size: 10px;
+}
+
+.container {
+	margin: auto;
+	width: 90vw;
+	min-width: 600px;
+}
+
+.chart {
+	width: 100%;
+	user-select: none;
+}
