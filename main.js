@@ -1,5 +1,4 @@
 d3.json("flare.json").then(data => {
-	console.log(data);
 	////////////////////////////////////////////////////////////
 	//// Setup /////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////
@@ -7,18 +6,30 @@ d3.json("flare.json").then(data => {
 	const margin = { top: 10, right: 10, bottom: 10, left: 10 };
 	const svgWidth = svg.node().clientWidth;
 	const width = svgWidth - margin.left - margin.right;
-	const dx = 10;
-	const dy = width / 6;
-	const svgHeight = dx + margin.top + margin.bottom;
+	const columnWidth = width / 6;
+	const svgHeight = margin.top + margin.bottom;
 
-	const tree = d3.tree().nodeSize([dx, dy]);
+	const linkOuterWidth = 5;
+	const linkInnerWidth = 2;
+	const nodeOuterWidth = 8;
+	const nodeInnerWidth = 4;
+
+	const flextree = d3.flextree;
+	const layout = flextree({
+		nodeSize: node => [
+			node.children ? node.children.length * linkOuterWidth : linkOuterWidth,
+			columnWidth
+		],
+		spacing: 16
+	});
+
 	const diagonal = d3
 		.linkHorizontal()
 		.x(d => d.y)
 		.y(d => d.x);
 
-	const root = d3.hierarchy(data);
-	root.x0 = dy / 2;
+	const root = layout.hierarchy(data);
+	root.x0 = columnWidth / 2;
 	root.y0 = 0;
 	root.descendants().forEach((d, i) => {
 		d.id = i;
@@ -54,7 +65,7 @@ d3.json("flare.json").then(data => {
 		const links = root.links();
 
 		// Compute the new tree layout
-		tree(root);
+		layout(root);
 
 		// Compute the new height
 		let left = root;
@@ -103,6 +114,16 @@ d3.json("flare.json").then(data => {
 			.attr("stroke-linejoin", "round")
 			.attr("stroke-width", 3)
 			.attr("stroke", "white");
+
+		// nodeEnter
+		// 	.append("rect")
+		// 	.each(d => console.log(d))
+		// 	.attr("stroke", "#ccc")
+		// 	.attr("fill", "none")
+		// 	.attr("x", 0)
+		// 	.attr("y", d => -d.xSize / 2)
+		// 	.attr("width", d => d.ySize)
+		// 	.attr("height", d => d.xSize);
 
 		// Transition nodes to their new position
 		const nodeUpdate = node
