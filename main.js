@@ -9,10 +9,23 @@ d3.json("flare.json").then(data => {
 	const columnWidth = width / 6;
 	const svgHeight = margin.top + margin.bottom;
 
-	const linkOuterWidth = 5;
+	const linkOuterWidth = 4;
 	const linkInnerWidth = 2;
 	const nodeOuterWidth = 8;
 	const nodeInnerWidth = 4;
+
+	const colors = [
+		"#0039A6",
+		"#FF6319",
+		"#6CBE45",
+		"#996633",
+		"#A7A9AC",
+		"#FCCC0A",
+		"#808183",
+		"#EE352E",
+		"#00933C",
+		"#B933AD"
+	];
 
 	const flextree = d3.flextree;
 	const layout = flextree({
@@ -23,18 +36,74 @@ d3.json("flare.json").then(data => {
 		spacing: 22
 	});
 
-	const diagonal = d3
-		.linkHorizontal()
-		.x(d => d.y)
-		.y(d => d.x);
+	const linkPath = d => {
+		const isEnterOrExit = d.source === d.target;
+		let xOffset = 0;
+		let yOffset = 0;
+		if (!isEnterOrExit) {
+			// Calculate offsets
+			// Source max child index
+			const children = d.source.children;
+			const n = children.length - 1;
+			// Target index
+			const i = children.indexOf(d.target);
+			yOffset = i - n / 2;
+			// Source child sign change index
+			let j = 0;
+			while (
+				j <= n &&
+				d.source.x + (j - n / 2) * linkOuterWidth > children[j].x
+			) {
+				j++;
+			}
+			if (i < j) {
+				xOffset = i - j / 2;
+			} else {
+				xOffset = (n - j - 1) / 2 - (i - j);
+			}
+		}
+
+		// Starting point
+		const x0 = d.source.y;
+		const y0 = isEnterOrExit
+			? d.source.x
+			: d.source.x + yOffset * linkOuterWidth;
+		// First corner
+		const x1 = isEnterOrExit
+			? d.source.y
+			: (d.source.y + d.target.y) / 2 + xOffset * linkOuterWidth;
+		const y1 = y0;
+		// Second corner
+		const x2 = x1;
+		const y2 = d.target.x;
+		// Ending point
+		const x3 = d.target.y;
+		const y3 = y2;
+
+		const path = d3.path();
+		path.moveTo(x0, y0);
+		path.lineTo(x1, y1);
+		path.lineTo(x2, y2);
+		path.lineTo(x3, y3);
+		return path.toString();
+	};
 
 	const root = layout.hierarchy(data);
 	root.x0 = columnWidth / 2;
 	root.y0 = 0;
+	root.color = "#000";
+	root.children.forEach((d, i) => (d.color = colors[i]));
 	root.descendants().forEach((d, i) => {
 		d.id = i;
 		d._children = d.children;
-		// Initial collapsed state
+		// Assign colors
+		if (i > colors.length) {
+			d.color = d.parent.color;
+		}
+	});
+
+	// Initial collapsed state
+	root.descendants().forEach(d => {
 		if (d.depth && d.data.name.length !== 7) d.children = null;
 	});
 
@@ -44,12 +113,7 @@ d3.json("flare.json").then(data => {
 		.append("g")
 		.attr("transform", `translate(${margin.left},${margin.top})`);
 
-	const gLink = g
-		.append("g")
-		.attr("fill", "none")
-		.attr("stroke", "#555")
-		.attr("stroke-opacity", 0.4)
-		.attr("stroke-width", 1.5);
+	const gLink = g.append("g").attr("fill", "none");
 
 	const gNode = g
 		.append("g")
@@ -157,32 +221,43 @@ d3.json("flare.json").then(data => {
 		nodeExit.selectAll(".node__label").attr("y", d => -d.xSize / 2);
 
 		// Update the links
-		const link = gLink.selectAll("path").data(links, d => d.target.id);
+		const link = gLink.selectAll("g").data(links, d => d.target.id);
 
 		// Enter any new links at the parent's previous position.
 		const linkEnter = link
 			.enter()
+			.append("g")
+			.attr("class", "link");
+
+		linkEnter
 			.append("path")
+			.attr("class", "link__path link__path--outer")
+			.attr("stroke-width", linkOuterWidth)
+			.attr("stroke", "#fff")
 			.attr("d", d => {
 				const o = { x: source.x0, y: source.y0 };
-				return diagonal({ source: o, target: o });
-			});
+				return linkPath({ source: o, target: o });
+			})
+			.clone(true)
+			.attr("class", "link__path link__path--inner")
+			.attr("stroke-width", linkInnerWidth)
+			.attr("stroke", d => d.target.color);
 
 		// Transition links to their new position.
-		link
-			.merge(linkEnter)
-			.transition(transition)
-			.attr("d", diagonal);
+		const linkUpdate = link.merge(linkEnter).transition(transition);
+
+		linkUpdate.selectAll(".link__path").attr("d", linkPath);
 
 		// Transition exiting nodes to the parent's new position.
-		link
+		const linkExit = link
 			.exit()
 			.transition(transition)
-			.remove()
-			.attr("d", d => {
-				const o = { x: source.x, y: source.y };
-				return diagonal({ source: o, target: o });
-			});
+			.remove();
+
+		linkExit.selectAll(".link__path").attr("d", d => {
+			const o = { x: source.x, y: source.y };
+			return linkPath({ source: o, target: o });
+		});
 
 		// Stash the old positions for transition.
 		root.eachBefore(d => {
