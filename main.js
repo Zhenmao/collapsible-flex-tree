@@ -6,7 +6,7 @@ d3.json("flare.json").then(data => {
 	const margin = { top: 10, right: 10, bottom: 10, left: 10 };
 	const svgWidth = svg.node().clientWidth;
 	const width = svgWidth - margin.left - margin.right;
-	const columnWidth = width / 6;
+	const columnWidth = width / 5;
 	const svgHeight = margin.top + margin.bottom;
 
 	const linkOuterWidth = 4;
