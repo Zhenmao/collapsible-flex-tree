@@ -17,10 +17,10 @@ d3.json("flare.json").then(data => {
 	const flextree = d3.flextree;
 	const layout = flextree({
 		nodeSize: node => [
-			node.children ? node.children.length * linkOuterWidth : linkOuterWidth,
+			node.children ? (node.children.length - 1) * linkOuterWidth : 0,
 			columnWidth
 		],
-		spacing: 16
+		spacing: 22
 	});
 
 	const diagonal = d3
@@ -89,6 +89,7 @@ d3.json("flare.json").then(data => {
 		const nodeEnter = node
 			.enter()
 			.append("g")
+			.attr("class", "node")
 			.attr("transform", d => `translate(${source.y0},${source.x0})`)
 			.attr("fill-opacity", 0)
 			.attr("stroke-opacity", 0)
@@ -98,32 +99,31 @@ d3.json("flare.json").then(data => {
 			});
 
 		nodeEnter
-			.append("circle")
-			.attr("r", 2.5)
-			.attr("fill", d => (d._children ? "#555" : "#999"))
-			.attr("stroke-width", 10);
+			.append("line")
+			.attr("class", "node__line node__line--outer")
+			.attr("y1", d => -d.xSize / 2)
+			.attr("y2", d => d.xSize / 2)
+			.attr("stroke", "#000")
+			.attr("stroke-width", nodeOuterWidth)
+			.clone(true)
+			.attr("class", "node__line node__line--inner")
+			.attr("stroke", d => (d._children ? "#fff" : "#000"))
+			.attr("stroke-width", nodeInnerWidth);
 
 		nodeEnter
 			.append("text")
-			.attr("dy", "0.31em")
+			.attr("class", "node__label node__label--inner")
+			.attr("dy", "-0.3em")
 			.attr("x", 6)
+			.attr("y", d => -d.xSize / 2)
 			.attr("text-anchor", "start")
 			.text(d => d.data.name)
 			.clone(true)
 			.lower()
+			.attr("class", "node__label node__label--outer")
 			.attr("stroke-linejoin", "round")
 			.attr("stroke-width", 3)
-			.attr("stroke", "white");
-
-		// nodeEnter
-		// 	.append("rect")
-		// 	.each(d => console.log(d))
-		// 	.attr("stroke", "#ccc")
-		// 	.attr("fill", "none")
-		// 	.attr("x", 0)
-		// 	.attr("y", d => -d.xSize / 2)
-		// 	.attr("width", d => d.ySize)
-		// 	.attr("height", d => d.xSize);
+			.attr("stroke", "#fff");
 
 		// Transition nodes to their new position
 		const nodeUpdate = node
@@ -133,6 +133,13 @@ d3.json("flare.json").then(data => {
 			.attr("fill-opacity", 1)
 			.attr("stroke-opacity", 1);
 
+		nodeUpdate
+			.selectAll(".node__line")
+			.attr("y1", d => -d.xSize / 2)
+			.attr("y2", d => d.xSize / 2);
+
+		nodeUpdate.selectAll(".node__label").attr("y", d => -d.xSize / 2);
+
 		// Transition exiting nodes to the parent's new position.
 		const nodeExit = node
 			.exit()
@@ -141,6 +148,13 @@ d3.json("flare.json").then(data => {
 			.attr("transform", d => `translate(${source.y},${source.x})`)
 			.attr("fill-opacity", 0)
 			.attr("stroke-opacity", 0);
+
+		nodeExit
+			.selectAll(".node__line")
+			.attr("y1", d => -d.xSize / 2)
+			.attr("y2", d => d.xSize / 2);
+
+		nodeExit.selectAll(".node__label").attr("y", d => -d.xSize / 2);
 
 		// Update the links
 		const link = gLink.selectAll("path").data(links, d => d.target.id);

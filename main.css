@@ -17,3 +17,7 @@ svg text {
 	width: 100%;
 	user-select: none;
 }
+
+.node__line {
+	stroke-linecap: round;
+}
